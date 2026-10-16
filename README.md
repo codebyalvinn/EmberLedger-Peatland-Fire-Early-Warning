@@ -6,6 +6,9 @@ fresh forest-loss alerts, and recent hotspots into a transparent **relative
 risk index** for now, +3 days, and +7 days. It is decision support, not a
 probability, an official warning, or a validated operational forecast.
 
+<img src="public/preview-ui.png" alt="tampilan awal" width="600">
+<img src="public/preview-hotspot-cell-information.png" alt="informasi hotspot cell" width="600">
+
 ## Run the demo
 
 Requirements: Node.js 20.9 or newer.
@@ -20,8 +23,6 @@ without network access in Snapshot mode. Use the visible mode switch to
 demonstrate that Live mode explicitly falls back to the cached snapshot when
 credentials, sources, or validated inputs are unavailable. No API keys are
 needed to run the demo.
-
-<img src="public/preview-ui.png" alt="Deskripsi Gambar" width="600">
 
 The precomputed grid and scenario snapshots in `public/data/` are the demo
 fixture. To rebuild them from scratch:
