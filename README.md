@@ -21,7 +21,7 @@ demonstrate that Live mode explicitly falls back to the cached snapshot when
 credentials, sources, or validated inputs are unavailable. No API keys are
 needed to run the demo.
 
-<img src="src/preview.png" alt="Deskripsi Gambar" width="600">
+<img src="public/preview-ui.png" alt="Deskripsi Gambar" width="600">
 
 The precomputed grid and scenario snapshots in `public/data/` are the demo
 fixture. To rebuild them from scratch:
