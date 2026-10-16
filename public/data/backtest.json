@@ -1,0 +1,5 @@
+{
+  "status": "unavailable",
+  "methodology": "For each weekly as-of date, rank peat cells by risk using only information available on that date; count observed hotspots over the following seven days.",
+  "limitation": "No verified historical FIRMS, GFW alert, peat-boundary, or weather archive was provided. Scenario data is deliberately excluded; no empirical hit rate, lift, precision, or lead time is claimed."
+}

@@ -1,0 +1,41 @@
+{
+  "name": "emberledger",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "predev": "npm run copy-map-worker",
+    "prebuild": "npm run copy-map-worker",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "copy-map-worker": "node scripts/copy-map-worker.mjs",
+    "grid": "tsx scripts/make-grid.ts",
+    "probe": "tsx scripts/probe-sources.ts",
+    "demo-data": "tsx scripts/create-demo-data.ts",
+    "fetch-villages": "tsx scripts/fetch-villages.ts",
+    "build-peat-fraction": "tsx scripts/build-peat-fraction.ts",
+    "snapshot": "tsx scripts/build-snapshot.ts",
+    "replay-data": "tsx scripts/build-replay.ts",
+    "backtest": "tsx scripts/backtest.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "maplibre-gl": "^6.14.0",
+    "next": "16.4.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.2",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^4.1.12"
+  }
+}
