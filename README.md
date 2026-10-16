@@ -7,8 +7,8 @@ risk index** for now, +3 days, and +7 days. It is decision support, not a
 probability, an official warning, or a validated operational forecast.
 
 <p align="center">
-<img src="public/preview-ui.png" alt="tampilan awal" width="600">
-<img src="public/preview-hotspot-cell-information.png" alt="informasi hotspot cell" width="600">
+<img src="public/preview-ui.png" width="45%" alt="tampilan awal" width="600">
+<img src="public/preview-hotspot-cell-information.png" width="45%" alt="informasi hotspot cell" width="600">
 </p>
 
 ## Run the demo
