@@ -13,7 +13,7 @@ function dateIsRecent(date: string, days: number) {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const rawDays = Number(url.searchParams.get("days") ?? 7);
-  const days = Number.isInteger(rawDays) ? Math.max(1, Math.min(30, rawDays)) : 7;
+  const days = Number.isInteger(rawDays) ? Math.max(1, Math.min(7, rawDays)) : 7;
   const requestedMode = parseMode(url.searchParams.get("mode"));
   let body: EventCollection;
   let actualMode: "live" | "snapshot" = "snapshot";
@@ -74,5 +74,7 @@ export async function GET(request: Request) {
     mode: actualMode,
     snapshotDate,
     reason: fallbackReason || undefined,
+    liveLayers: actualMode === "live" ? "NASA FIRMS hotspots" : undefined,
+    simulatedLayers: actualMode === "snapshot" ? "hotspots" : undefined,
   });
 }

@@ -5,6 +5,11 @@ export type WatchItem = {
   village: Village;
   risk: number;
   topDriver: "dry" | "clear" | "hot";
+  contributions: {
+    dry: number;
+    clear: number;
+    hot: number;
+  };
   cellId: string;
   nearestAlertKm: number | null;
 };
@@ -66,6 +71,7 @@ export function rankVillages(
           village,
           risk: 0,
           topDriver: "dry" as const,
+          contributions: { dry: 0, clear: 0, hot: 0 },
           cellId: "",
           nearestAlertKm,
         };
@@ -85,6 +91,11 @@ export function rankVillages(
         village,
         risk: properties.risk,
         topDriver,
+        contributions: {
+          dry: properties.dryContribution,
+          clear: properties.clearContribution,
+          hot: properties.hotContribution,
+        },
         cellId: properties.id,
         nearestAlertKm,
       };

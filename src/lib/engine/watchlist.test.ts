@@ -58,6 +58,12 @@ describe("village watch-list", () => {
     expect(ranked).toHaveLength(1);
     expect(ranked[0].cellId).toBe("cell-high");
     expect(ranked[0].risk).toBe(80);
+    expect(ranked[0].topDriver).toBe("clear");
+    expect(ranked[0].contributions).toEqual({
+      dry: 10,
+      clear: 70,
+      hot: 0,
+    });
   });
 
   it("rejects invalid result limits", () => {

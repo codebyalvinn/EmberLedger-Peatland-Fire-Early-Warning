@@ -77,6 +77,7 @@ export function buildRiskCollection(
   horizon: Horizon,
   asOfDate: string,
   peatFractions?: ReadonlyMap<string, number>,
+  scenario = true,
 ): RiskCollection {
   const alerts = eventPoints(sources.alerts).filter(
     (event) =>
@@ -154,7 +155,7 @@ export function buildRiskCollection(
           clearContribution: rounded(breakdown.clearContribution),
           hotContribution: rounded(breakdown.hotContribution),
           synergyContribution: rounded(breakdown.synergyContribution),
-          scenario: true,
+          scenario,
         },
         geometry: feature.geometry,
       };

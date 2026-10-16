@@ -12,6 +12,7 @@ const item: WatchItem = {
   },
   risk: 72,
   topDriver: "clear",
+  contributions: { dry: 18, clear: 42, hot: 12 },
   cellId: "cell-1",
   nearestAlertKm: 1.2,
 };

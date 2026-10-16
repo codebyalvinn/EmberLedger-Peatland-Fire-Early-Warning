@@ -16,10 +16,19 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000). The bundled demo works
-without network access in Snapshot mode. Use the visible mode switch to
-demonstrate that Live mode explicitly falls back to the cached snapshot when
-credentials, sources, or validated inputs are unavailable. No API keys are
-needed to run the demo.
+without network access in Snapshot mode. Live mode uses Open-Meteo weather and
+NASA FIRMS hotspots when available; clearing alerts and peat coverage remain
+simulated until a verified GFW export and peat layer are configured. A failed
+live input switches the risk grid back to the bundled snapshot. No API keys
+are needed for the snapshot demo.
+
+To enable FIRMS, add the server-only key to `.env.local`:
+
+```dotenv
+FIRMS_MAP_KEY=your_nasa_firms_map_key
+```
+
+Do not prefix it with `NEXT_PUBLIC_`. Open-Meteo does not require a key.
 
 The precomputed grid and scenario snapshots in `public/data/` are the demo
 fixture. To rebuild them from scratch:
@@ -45,9 +54,10 @@ their values or replay events as observed satellite or weather evidence.
 3. Open the ranked village watch-list and draft an Indonesian alert. The
    generated message is deterministic, labeled illustrative, and explicitly
    says it is not an official warning.
-4. Switch to Live mode to show the explicit snapshot fallback, then use Replay
-   to scrub illustrative as-of checkpoints and inspect the following-week
-   event markers.
+4. Switch to Live mode to show live Open-Meteo weather and NASA FIRMS hotspots
+   alongside simulated clearing and peat inputs. Without a FIRMS key or if a
+   source is unavailable, the risk grid explicitly falls back to the bundled
+   snapshot. Then use Replay to inspect illustrative checkpoints.
 5. Point out the backtest status. Metrics remain unavailable until a verified,
    non-synthetic historical archive is supplied.
 
@@ -59,12 +69,28 @@ npm run lint
 npm run build
 ```
 
+The live provider probes print the actual source responses before parsing is
+used by the app:
+
+```sh
+npm run probe:openmeteo
+npm run probe:openmeteo-archive
+FIRMS_MAP_KEY=your_nasa_firms_map_key npm run probe:firms
+```
+
+The Open-Meteo probe requests all bundled 0.25-degree weather nodes with
+92 past days and 7 forecast days. The archive probe verifies historical
+weather coverage for the 92-day Drought Code history. The FIRMS probe requests
+the VIIRS NRT AOI area CSV for the last 7 days and prints its header plus
+sample rows. Never paste or commit the key.
+
 ## Deploy to Vercel
 
 The static scenario snapshots and local MapLibre worker are included in the
-deployment. No credentials are required for the offline demo; Live mode
-continues to fall back to snapshots until live scoring and its inputs are
-configured and validated.
+deployment. No credentials are required for the offline demo. Configure
+`FIRMS_MAP_KEY` as a server-side Vercel environment variable to enable live
+FIRMS data; Open-Meteo requires no key. Clearing alerts and peat coverage
+remain simulated.
 
 1. Install dependencies and confirm the production build locally:
 
@@ -109,17 +135,27 @@ Optional server-only credentials and configuration can be placed in
 `.env.local` using `.env.example` as a guide:
 
 - `FIRMS_MAP_KEY` for NASA FIRMS
-- `GFW_API_KEY` and `GFW_ALERTS_GEOJSON_URL` for Global Forest Watch alerts
 - `FIRMS_SOURCE` for the FIRMS feed selection
 
-Never put credentials in client code. The Live toggle currently probes
-available adapters but deliberately falls back to the bundled snapshot:
-integrated live scoring remains disabled until source schemas, an AOI-verified
-peat mask, and validated inputs are available. Open-Meteo does not require an
-API key. `npm run probe` prints raw source responses for inspection; it does
-not silently infer unverified field names. `npm run fetch-villages` requests
-village points from Overpass and updates the village cache used by the
-watch-list; public Overpass availability is not guaranteed.
+Never put credentials in client code. Live risk is computed with Open-Meteo
+daily weather and NASA FIRMS VIIRS NRT hotspots; the existing Drought Code
+engine processes 92 days of history and rolls the requested horizon forward.
+The forecast endpoint provides the current forecast; the Open-Meteo archive
+endpoint supplies the verified historical dates where forecast responses have
+missing measurements. All live inputs are fetched server-side and cached in
+memory (weather 60 minutes, FIRMS 30 minutes, calculated risk 10 minutes).
+Concurrent requests share the same in-flight fetch. If either required live
+source is unavailable or malformed, the API returns the complete bundled snapshot and marks
+`X-Data-Mode: snapshot`; successful risk responses identify live and simulated
+layers in `X-Live-Layers` and `X-Simulated-Layers`.
+
+Clearing alerts and peat coverage are still simulated and explicitly labeled
+as such. Open-Meteo does not require a key. `npm run probe:openmeteo`, `npm run probe:openmeteo-archive`, and
+`npm run probe:firms` print provider responses for inspection before the
+adapters consume those fields. `npm run probe` continues to probe the other
+configured sources. `npm run fetch-villages` requests village points from
+Overpass and updates the village cache used by the watch-list; public Overpass
+availability is not guaranteed.
 
 To use a legally usable peat boundary clipped to the AOI, place it at
 `public/data/peat.geojson`, then run:

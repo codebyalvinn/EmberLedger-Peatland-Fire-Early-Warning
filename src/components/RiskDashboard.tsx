@@ -17,6 +17,8 @@ type DataStatus = {
   mode: DataMode;
   snapshotDate: string;
   reason: string;
+  liveLayers: string;
+  simulatedLayers: string;
 };
 
 type AlertMessage = {
@@ -32,9 +34,9 @@ const horizonLabels: Record<Horizon, string> = {
 };
 
 const driverLabels: Record<WatchItem["topDriver"], string> = {
-  dry: "Drying conditions",
-  clear: "Nearby clearing",
-  hot: "Detected hotspots",
+  dry: "Dryness",
+  clear: "Clearing",
+  hot: "Hotspots",
 };
 
 async function fetchTyped<T>(url: string): Promise<T> {
@@ -219,17 +221,20 @@ function riskLabel(risk: number) {
   return risk >= 65 ? "Elevated index" : risk >= 35 ? "Watch index" : "Lower index";
 }
 
-function villageSourceNote(watchlist: WatchItem[]) {
+function villageSourceNote(watchlist: WatchItem[], hasLiveInputs: boolean) {
+  const inputNote = hasLiveInputs
+    ? "Risk inputs: live weather and hotspots; simulated clearing and peat coverage."
+    : "Risk inputs are illustrative scenario data.";
   const osmCount = watchlist.filter(
     (item) => item.village.source === "OpenStreetMap",
   ).length;
   if (osmCount === watchlist.length && osmCount > 0) {
-    return "Village locations: © OpenStreetMap contributors. Risk inputs remain illustrative.";
+    return `Village locations: © OpenStreetMap contributors. ${inputNote}`;
   }
   if (osmCount > 0) {
-    return "Village locations include illustrative points and © OpenStreetMap contributors.";
+    return `Village locations include illustrative points and © OpenStreetMap contributors. ${inputNote}`;
   }
-  return "Bundled village points are illustrative demo locations.";
+  return `Bundled village points are illustrative demo locations. ${inputNote}`;
 }
 
 export default function RiskDashboard() {
@@ -239,6 +244,8 @@ export default function RiskDashboard() {
     mode: "snapshot",
     snapshotDate: "2026-10-15",
     reason: "Bundled illustrative scenario.",
+    liveLayers: "none",
+    simulatedLayers: "weather, hotspots, clearing alerts, peat coverage",
   });
   const [watchlist, setWatchlist] = useState<WatchItem[]>([]);
   const [watchlistError, setWatchlistError] = useState("");
@@ -407,14 +414,17 @@ export default function RiskDashboard() {
             recent land clearing—signals a hotspot map cannot show in advance.
           </p>
         </div>
-        <aside className="scenario-notice">
-          <strong>Illustrative demo scenario</strong>
-          <span>
-            Forecasts, alerts, hotspot locations, and peat coverage below are
-            generated examples, not verified field data. Village locations are
-            labeled by source. Do not use these scores to dispatch patrols.
-          </span>
-        </aside>
+        <details className="scenario-disclosure">
+          <summary>
+            <span className="scenario-disclosure-dot" aria-hidden="true" />
+            {status.mode === "live" ? "Live + simulated" : "Simulated data"}
+          </summary>
+          <p>
+            {status.mode === "live"
+              ? "Open-Meteo forecast and archive weather plus NASA FIRMS hotspots are live. Clearing alerts and peat coverage are simulated; the relative index is not calibrated. Do not use these scores to dispatch patrols."
+              : "Weather, clearing alerts, hotspot locations, and peat coverage are illustrative, not verified field data. Do not use these scores to dispatch patrols."}
+          </p>
+        </details>
       </section>
 
       <section className="control-bar" aria-label="Map display controls">
@@ -461,13 +471,18 @@ export default function RiskDashboard() {
             ))}
           </div>
         </div>
-        <span className="snapshot-badge">
-          Simulated Data <span aria-hidden="true">·</span> Offline Snapshot
+        <span className="snapshot-badge" aria-live="polite">
+          <span>
+            <strong>Live:</strong> {status.liveLayers || "none"}
+          </span>
+          <span>
+            <strong>Simulated:</strong> {status.simulatedLayers}
+          </span>
         </span>
         {requestedMode === "live" && status.mode === "snapshot" && (
           <p className="fallback-note" role="status">
-            Live satellite stream requires API credentials. Falling back to
-            offline snapshot mode for demo stability.
+            Live feeds are unavailable; showing the bundled snapshot.
+            {status.reason && ` ${status.reason}`}
           </p>
         )}
       </section>
@@ -492,11 +507,13 @@ export default function RiskDashboard() {
             watchlist={watchlist}
             selectedCellId={selectedCellId}
             onCellSelect={selectCell}
+            onVillageSelect={selectWatchItem}
             onDataStatus={setStatus}
           />
           <p className="map-caption">
             Risk colors show relative index bands, not calibrated fire
-            probabilities. This map has a local, no-tile basemap and works offline.
+            probabilities. Peat extent is an illustrative zone, not a verified
+            peat boundary. This local map works offline.
           </p>
         </section>
 
@@ -513,7 +530,9 @@ export default function RiskDashboard() {
               Ranked by the maximum cell index within a 5 km radius. Select a
               village to inspect its highest-scoring cell.
             </p>
-            <p className="panel-footnote">{villageSourceNote(watchlist)}</p>
+            <p className="panel-footnote">
+              {villageSourceNote(watchlist, status.mode === "live")}
+            </p>
             {replayAsOf && (
               <p className="replay-watchlist-note">
                 Showing latest-snapshot rankings; watch-list values are not replayed.
@@ -536,7 +555,39 @@ export default function RiskDashboard() {
                     <span className="watch-copy">
                       <span className="watch-name">{item.village.name}</span>
                       <span className="watch-driver">
-                        {driverLabels[item.topDriver]}
+                        Top driver: {driverLabels[item.topDriver]}
+                      </span>
+                      <span
+                        className="watch-contribution-bar"
+                        role="img"
+                        aria-label={`Contributions: dryness ${item.contributions.dry.toFixed(1)}, clearing ${item.contributions.clear.toFixed(1)}, hotspots ${item.contributions.hot.toFixed(1)} index points`}
+                      >
+                        {(
+                          [
+                            ["dry", item.contributions.dry, "#698d54"],
+                            ["clear", item.contributions.clear, "#d4a448"],
+                            ["hot", item.contributions.hot, "#b95342"],
+                          ] as const
+                        ).map(([key, value, color]) => (
+                          <i
+                            key={key}
+                            style={{
+                              width: `${
+                                item.contributions.dry +
+                                  item.contributions.clear +
+                                  item.contributions.hot >
+                                0
+                                  ? (value /
+                                      (item.contributions.dry +
+                                        item.contributions.clear +
+                                        item.contributions.hot)) *
+                                    100
+                                  : 0
+                              }%`,
+                              backgroundColor: color,
+                            }}
+                          />
+                        ))}
                       </span>
                     </span>
                     <span className="watch-score">
@@ -670,19 +721,23 @@ function CellPanel({
 
   return (
     <section className="cell-panel" aria-labelledby="cell-panel-title">
-      <p className="eyebrow">CELL EXPLANATION · ILLUSTRATIVE</p>
+      <p className="eyebrow">
+        {properties.scenario
+          ? "CELL EXPLANATION · ILLUSTRATIVE"
+          : "CELL EXPLANATION · LIVE + SIMULATED INPUTS"}
+      </p>
       <div className="cell-score-heading">
         <div>
           <h2 id="cell-panel-title">{properties.id}</h2>
           <p>{riskLabel(properties.risk)}</p>
         </div>
         <strong className="cell-score">
-          {Math.round(properties.risk)}
+          {properties.risk.toFixed(1)}
           <small>index pts</small>
         </strong>
       </div>
       <p className="cell-asof">
-        Snapshot as of {formatSnapshotDate(asOfDate)} · relative index points
+        Inputs through {formatSnapshotDate(asOfDate)} · relative index points
       </p>
 
       <div className="signal-grid">
@@ -759,8 +814,10 @@ function CellPanel({
         <p>
           Drought Code starts at 100, uses a tropical day-length factor of 1.4,
           and rolls forward with daily rain and maximum temperature. The score
-          uses a 92-day weather window with the first 30 days as spin-up. All
-          displayed input values are illustrative scenario data.
+          uses a 92-day weather window with the first 30 days as spin-up.{" "}
+          {properties.scenario
+            ? "All displayed input values are illustrative scenario data."
+            : "Weather and hotspot inputs are live; clearing alerts and peat coverage remain simulated. The index is not validated for operational decisions."}
         </p>
       </div>
       <FormulaSummary />

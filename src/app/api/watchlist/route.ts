@@ -1,7 +1,9 @@
 import { HORIZONS, SNAPSHOT_DATE, type Horizon } from "@/lib/config";
 import { rankVillages } from "@/lib/engine/watchlist";
+import { getLiveRisk } from "@/lib/server/live-risk";
 import {
   dataResponse,
+  fallbackMessage,
   parseMode,
   readPublicData,
 } from "@/lib/server/data";
@@ -29,10 +31,34 @@ export async function GET(request: Request) {
     );
   }
 
+  const requestedMode = parseMode(url.searchParams.get("mode"));
   const [bundle, sources] = await Promise.all([
     readPublicData<SnapshotBundle>(request, "/data/snapshot-latest.json"),
     readPublicData<SourceSnapshot>(request, "/data/source-snapshot.json"),
   ]);
+  if (requestedMode === "live") {
+    try {
+      const live = await getLiveRisk(request, horizon);
+      return dataResponse(
+        rankVillages(sources.villages, live.risk, sources.alerts, rawLimit),
+        {
+          mode: "live",
+          snapshotDate: live.snapshotDate,
+          liveLayers: "Weather (Open-Meteo), hotspots (NASA FIRMS)",
+          simulatedLayers: "clearing alerts, peat coverage",
+        },
+      );
+    } catch (error) {
+      return dataResponse(
+        rankVillages(sources.villages, bundle.cells[horizon], sources.alerts, rawLimit),
+        {
+          snapshotDate: bundle.snapshotDate || SNAPSHOT_DATE,
+          reason: `Live watch-list unavailable; using the snapshot (${fallbackMessage(error)})`,
+          simulatedLayers: "weather, hotspots, clearing alerts, peat coverage",
+        },
+      );
+    }
+  }
   const body = rankVillages(
     sources.villages,
     bundle.cells[horizon],
@@ -42,9 +68,7 @@ export async function GET(request: Request) {
 
   return dataResponse(body, {
     snapshotDate: bundle.snapshotDate || SNAPSHOT_DATE,
-    reason:
-      parseMode(url.searchParams.get("mode")) === "live"
-        ? "Village ranking uses the bundled illustrative risk snapshot."
-        : "Snapshot mode selected.",
+    reason: "Snapshot mode selected.",
+    simulatedLayers: "weather, hotspots, clearing alerts, peat coverage",
   });
 }

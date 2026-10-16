@@ -23,6 +23,8 @@ export function dataResponse<T>(
     snapshotDate: string;
     reason?: string;
     status?: number;
+    liveLayers?: string;
+    simulatedLayers?: string;
   },
 ) {
   const mode = options.mode ?? "snapshot";
@@ -35,6 +37,10 @@ export function dataResponse<T>(
     headers.set("X-Demo-Data", "illustrative-scenario");
   }
   if (options.reason) headers.set("X-Data-Fallback", options.reason);
+  if (options.liveLayers) headers.set("X-Live-Layers", options.liveLayers);
+  if (options.simulatedLayers) {
+    headers.set("X-Simulated-Layers", options.simulatedLayers);
+  }
   return Response.json(body, { status: options.status ?? 200, headers });
 }
 

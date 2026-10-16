@@ -1,9 +1,6 @@
 import { HORIZONS, SNAPSHOT_DATE, type Horizon } from "@/lib/config";
-import { fetchFirmsHotspots } from "@/lib/adapters/firms";
-import { fetchGfwAlerts } from "@/lib/adapters/gfw";
-import { fetchOpenMeteoBulk } from "@/lib/adapters/openmeteo";
-import { fetchOverpassVillages } from "@/lib/adapters/overpass";
-import type { SnapshotBundle, SourceSnapshot } from "@/lib/types";
+import { getLiveRisk } from "@/lib/server/live-risk";
+import type { SnapshotBundle } from "@/lib/types";
 import {
   dataResponse,
   fallbackMessage,
@@ -14,33 +11,6 @@ import {
 function parseHorizon(value: string | null): Horizon | null {
   const horizon = Number(value);
   return HORIZONS.includes(horizon as Horizon) ? (horizon as Horizon) : null;
-}
-
-async function verifyLiveInputs(request: Request) {
-  const missing = [
-    ["FIRMS_MAP_KEY", process.env.FIRMS_MAP_KEY],
-    ["GFW_API_KEY", process.env.GFW_API_KEY],
-    ["GFW_ALERTS_GEOJSON_URL", process.env.GFW_ALERTS_GEOJSON_URL],
-  ]
-    .filter(([, value]) => !value)
-    .map(([name]) => name);
-  if (missing.length) {
-    throw new Error(`Live risk is unavailable; configure ${missing.join(", ")}.`);
-  }
-
-  const sources = await readPublicData<SourceSnapshot>(
-    request,
-    "/data/source-snapshot.json",
-  );
-  await Promise.all([
-    fetchFirmsHotspots(7),
-    fetchGfwAlerts(),
-    fetchOpenMeteoBulk(sources.weatherNodes),
-    fetchOverpassVillages(),
-  ]);
-  throw new Error(
-    "Live scoring remains disabled until an AOI-verified peat mask and validated source fields are configured.",
-  );
 }
 
 export async function GET(request: Request) {
@@ -54,12 +24,25 @@ export async function GET(request: Request) {
     );
   }
 
-  let fallbackReason = "Snapshot mode selected.";
   if (requestedMode === "live") {
     try {
-      await verifyLiveInputs(request);
+      const live = await getLiveRisk(request, horizon);
+      return dataResponse(live.risk, {
+        mode: "live",
+        snapshotDate: live.snapshotDate,
+        liveLayers: "Weather (Open-Meteo forecast + archive), hotspots (NASA FIRMS)",
+        simulatedLayers: "clearing alerts, peat coverage",
+      });
     } catch (error) {
-      fallbackReason = fallbackMessage(error);
+      const bundle = await readPublicData<SnapshotBundle>(
+        request,
+        "/data/snapshot-latest.json",
+      );
+      return dataResponse(bundle.cells[horizon], {
+        snapshotDate: bundle.snapshotDate || SNAPSHOT_DATE,
+        reason: fallbackMessage(error),
+        simulatedLayers: "weather, hotspots, clearing alerts, peat coverage",
+      });
     }
   }
 
@@ -69,6 +52,7 @@ export async function GET(request: Request) {
   );
   return dataResponse(bundle.cells[horizon], {
     snapshotDate: bundle.snapshotDate || SNAPSHOT_DATE,
-    reason: fallbackReason,
+    reason: "Snapshot mode selected.",
+    simulatedLayers: "weather, hotspots, clearing alerts, peat coverage",
   });
 }

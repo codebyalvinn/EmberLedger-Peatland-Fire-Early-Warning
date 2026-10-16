@@ -18,7 +18,7 @@ export type DemoCellProperties = {
   hotContribution: number;
   synergyContribution: number;
   horizon: Horizon;
-  scenario: true;
+  scenario: boolean;
 };
 
 export type RiskFeature = Feature<Polygon, DemoCellProperties>;
